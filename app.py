@@ -114,7 +114,6 @@ def find_android_studio_dynamically():
     logging.warning("Android Studio not found - using fallback")
     return None
 
-
         def save_image_resource(self, *args, **kwargs):
             return False
         def save_string_resource(self, *args, **kwargs):
