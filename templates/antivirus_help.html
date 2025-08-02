@@ -1,0 +1,157 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antivirus Configuration Help - APK Editor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">🛡️ Antivirus Configuration Help</h1>
+        
+        <div class="alert alert-info">
+            <h5>Why configure antivirus exclusions?</h5>
+            <p>APK Editor uses legitimate Android development tools that some antivirus software may incorrectly flag as suspicious. Adding exclusions prevents false positives and allows the application to function properly.</p>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>🎯 Quick Setup</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-primary" onclick="generateExclusions()">
+                    Generate Antivirus Exclusions
+                </button>
+                <div id="exclusions-result" class="mt-3"></div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Windows Defender</h5>
+                    </div>
+                    <div class="card-body">
+                        <ol>
+                            <li>Open <strong>Windows Security</strong></li>
+                            <li>Go to <strong>Virus & threat protection</strong></li>
+                            <li>Click <strong>"Manage settings"</strong> under Virus & threat protection settings</li>
+                            <li>Click <strong>"Add or remove exclusions"</strong></li>
+                            <li>Add folder exclusions for APK Editor directories</li>
+                            <li>Add file type exclusions for <code>.apk</code>, <code>.jar</code> files</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Other Antivirus Software</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>For other antivirus software:</p>
+                        <ul>
+                            <li>Look for <strong>"Exclusions"</strong> or <strong>"Whitelist"</strong> settings</li>
+                            <li>Add the APK Editor installation folder</li>
+                            <li>Add the projects and temp directories</li>
+                            <li>Exclude <code>python.exe</code>, <code>java.exe</code>, and <code>adb.exe</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>📁 Typical Folders to Exclude</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Application Folders:</h6>
+                        <ul>
+                            <li><code>C:\Users\[Username]\APKEditor\</code></li>
+                            <li><code>APK Editor installation directory</code></li>
+                            <li><code>projects/</code> subdirectory</li>
+                            <li><code>temp/</code> subdirectory</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>File Types:</h6>
+                        <ul>
+                            <li><code>*.apk</code> (Android packages)</li>
+                            <li><code>*.jar</code> (Java archives)</li>
+                            <li><code>apktool.jar</code> (APK tool)</li>
+                            <li><code>adb.exe</code> (Android Debug Bridge)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="alert alert-warning mt-4">
+            <h5>⚠️ Important Notes</h5>
+            <ul class="mb-0">
+                <li>Only add exclusions for the APK Editor directories</li>
+                <li>Keep your antivirus active for other system protection</li>
+                <li>These tools are legitimate Android development utilities</li>
+                <li>If you're unsure, consult your antivirus documentation</li>
+            </ul>
+        </div>
+        
+        <div class="mt-4">
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">← Back to APK Editor</a>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function generateExclusions() {
+            fetch('/configure_antivirus_exclusions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    let html = '<div class="alert alert-success"><h6>Copy these paths to your antivirus exclusions:</h6>';
+                    
+                    html += '<h6>📁 Folders:</h6><ul>';
+                    data.exclusions.folders.forEach(folder => {
+                        html += `<li><code>${folder}</code></li>`;
+                    });
+                    html += '</ul>';
+                    
+                    html += '<h6>📄 File Types:</h6><ul>';
+                    data.exclusions.files.forEach(file => {
+                        html += `<li><code>${file}</code></li>`;
+                    });
+                    html += '</ul>';
+                    
+                    html += '<h6>⚙️ Processes:</h6><ul>';
+                    data.exclusions.processes.forEach(process => {
+                        html += `<li><code>${process}</code></li>`;
+                    });
+                    html += '</ul></div>';
+                    
+                    document.getElementById('exclusions-result').innerHTML = html;
+                } else {
+                    document.getElementById('exclusions-result').innerHTML = 
+                        `<div class="alert alert-danger">Error: ${data.message}</div>`;
+                }
+            })
+            .catch(error => {
+                document.getElementById('exclusions-result').innerHTML = 
+                    `<div class="alert alert-danger">Error generating exclusions: ${error}</div>`;
+            });
+        }
+    </script>
+</body>
+</html>

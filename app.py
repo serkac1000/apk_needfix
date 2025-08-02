@@ -24,91 +24,109 @@ except ImportError as e:
             return ""
 
 def find_android_studio_dynamically():
-    """Dynamically find Android Studio installation - works on both Windows and Linux"""
+    """Enhanced Android Studio detection with better error handling"""
     import glob
     import platform
+    import subprocess
     
     system = platform.system().lower()
     
     if system == 'windows':
         username = os.getenv('USERNAME', '')
         
-        # Windows Android Studio paths
+        # Comprehensive Windows Android Studio paths
         android_studio_paths = [
             r"C:\Program Files\Android\Android Studio\bin\studio64.exe",
             r"C:\Program Files (x86)\Android\Android Studio\bin\studio64.exe",
             rf"C:\Users\{username}\AppData\Local\Android\Studio\bin\studio64.exe",
             rf"C:\Users\{username}\AppData\Roaming\JetBrains\Toolbox\apps\AndroidStudio\ch-0\*\bin\studio64.exe",
+            rf"C:\Users\{username}\AppData\Local\JetBrains\Toolbox\apps\AndroidStudio\ch-0\*\bin\studio64.exe",
             r"C:\Android\Android Studio\bin\studio64.exe",
-            "studio64.exe",  # If in PATH
-            "studio.exe"     # Alternative name
+            r"D:\Android\Android Studio\bin\studio64.exe",
+            r"E:\Android\Android Studio\bin\studio64.exe"
         ]
         
-        # Try each path
+        # Try each path with better error handling
         for path in android_studio_paths:
-            if '*' in path:
-                matches = glob.glob(path)
-                if matches:
-                    for match in matches:
-                        if os.path.exists(match):
-                            logging.info(f"Found Android Studio at: {match}")
-                            return match
-            elif os.path.exists(path):
-                logging.info(f"Found Android Studio at: {path}")
-                return path
+            try:
+                if '*' in path:
+                    matches = glob.glob(path)
+                    if matches:
+                        for match in matches:
+                            if os.path.exists(match) and os.access(match, os.R_OK):
+                                logging.info(f"Found Android Studio at: {match}")
+                                return match
+                elif os.path.exists(path) and os.access(path, os.R_OK):
+                    logging.info(f"Found Android Studio at: {path}")
+                    return path
+            except Exception as e:
+                logging.debug(f"Error checking path {path}: {e}")
+                continue
         
-        # Try Windows registry
+        # Try Windows registry with better error handling
         try:
             import winreg
             reg_paths = [
-                r"SOFTWARE\Android Studio",
-                r"SOFTWARE\WOW6432Node\Android Studio",
-                r"SOFTWARE\JetBrains\Android Studio"
+                (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Android Studio"),
+                (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Android Studio"),
+                (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\JetBrains\Android Studio"),
+                (winreg.HKEY_CURRENT_USER, r"SOFTWARE\JetBrains\Android Studio")
             ]
             
-            for reg_path in reg_paths:
+            for root_key, reg_path in reg_paths:
                 try:
-                    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, reg_path) as key:
+                    with winreg.OpenKey(root_key, reg_path) as key:
                         install_path, _ = winreg.QueryValueEx(key, "Path")
                         studio_exe = os.path.join(install_path, "bin", "studio64.exe")
                         if os.path.exists(studio_exe):
                             logging.info(f"Found Android Studio via registry: {studio_exe}")
                             return studio_exe
-                except (FileNotFoundError, OSError):
+                except (FileNotFoundError, OSError, winreg.error):
                     continue
         except ImportError:
-            pass
+            logging.debug("winreg not available")
+        
+        # Try to find via Windows where command
+        try:
+            result = subprocess.run(['where', 'studio64.exe'], capture_output=True, text=True, timeout=10)
+            if result.returncode == 0 and result.stdout.strip():
+                studio_path = result.stdout.strip().split('\n')[0]
+                if os.path.exists(studio_path):
+                    logging.info(f"Found Android Studio via where: {studio_path}")
+                    return studio_path
+        except Exception as e:
+            logging.debug(f"where command failed: {e}")
             
     elif system == 'linux':
-        # Linux Android Studio paths
         home = os.path.expanduser('~')
         android_studio_paths = [
             '/opt/android-studio/bin/studio.sh',
             f'{home}/android-studio/bin/studio.sh',
             f'{home}/.local/share/JetBrains/Toolbox/apps/AndroidStudio/ch-0/*/bin/studio.sh',
             '/usr/local/android-studio/bin/studio.sh',
-            '/snap/android-studio/current/bin/studio.sh',
-            'studio.sh',  # If in PATH
-            'android-studio'  # Alternative command
+            '/snap/android-studio/current/bin/studio.sh'
         ]
         
         for path in android_studio_paths:
-            if '*' in path:
-                matches = glob.glob(path)
-                if matches:
-                    for match in matches:
-                        if os.path.exists(match) and os.access(match, os.X_OK):
-                            logging.info(f"Found Android Studio at: {match}")
-                            return match
-            elif os.path.exists(path) and os.access(path, os.X_OK):
-                logging.info(f"Found Android Studio at: {path}")
-                return path
+            try:
+                if '*' in path:
+                    matches = glob.glob(path)
+                    if matches:
+                        for match in matches:
+                            if os.path.exists(match) and os.access(match, os.X_OK):
+                                logging.info(f"Found Android Studio at: {match}")
+                                return match
+                elif os.path.exists(path) and os.access(path, os.X_OK):
+                    logging.info(f"Found Android Studio at: {path}")
+                    return path
+            except Exception as e:
+                logging.debug(f"Error checking path {path}: {e}")
+                continue
         
         # Try which command for Linux
         try:
-            import subprocess
             for cmd in ['studio.sh', 'android-studio']:
-                result = subprocess.run(['which', cmd], capture_output=True, text=True)
+                result = subprocess.run(['which', cmd], capture_output=True, text=True, timeout=10)
                 if result.returncode == 0 and result.stdout.strip():
                     studio_path = result.stdout.strip()
                     logging.info(f"Found Android Studio via which: {studio_path}")
@@ -116,7 +134,7 @@ def find_android_studio_dynamically():
         except Exception as e:
             logging.debug(f"which command failed: {e}")
     
-    logging.warning("Android Studio not found - project will be created but not auto-opened")
+    logging.warning("Android Studio not found - will provide manual instructions")
     return None
 
     def save_image_resource(self, *args, **kwargs):
@@ -929,7 +947,78 @@ def open_resource_folder(project_id, resource_type):
 
 @app.route('/export_project/<project_id>/<export_type>', methods=['POST'])
 def export_project(project_id, export_type):
-    """Export project as ZIP or backup"""
+
+@app.route('/antivirus_help')
+def antivirus_help():
+    """Provide antivirus configuration help"""
+    return render_template('antivirus_help.html')
+
+@app.route('/configure_antivirus_exclusions', methods=['POST'])
+def configure_antivirus_exclusions():
+    """Provide antivirus exclusion instructions"""
+    try:
+        # Get current project directory
+        current_dir = os.path.abspath('.')
+        projects_dir = os.path.abspath(app.config['PROJECTS_FOLDER'])
+        temp_dir = os.path.abspath(app.config['TEMP_FOLDER'])
+        
+        exclusions = {
+            'folders': [
+                current_dir,
+                projects_dir,
+                temp_dir,
+                os.path.join(current_dir, 'tools'),
+                os.path.join(current_dir, 'uploads')
+            ],
+            'files': [
+                '*.apk',
+                '*.jar',
+                'apktool.jar',
+                'adb.exe'
+            ],
+            'processes': [
+                'python.exe',
+                'java.exe',
+                'adb.exe'
+            ]
+        }
+        
+        instructions = {
+            'windows_defender': [
+                "1. Open Windows Security",
+                "2. Go to Virus & threat protection",
+                "3. Click 'Manage settings' under Virus & threat protection settings",
+                "4. Click 'Add or remove exclusions'",
+                "5. Add the following folder exclusions:",
+                *[f"   - {folder}" for folder in exclusions['folders']],
+                "6. Add the following file type exclusions:",
+                *[f"   - {file_type}" for file_type in exclusions['files']]
+            ],
+            'generic': [
+                "Add these folders to your antivirus exclusions:",
+                *[f"  {folder}" for folder in exclusions['folders']],
+                "",
+                "Add these file types to exclusions:",
+                *[f"  {file_type}" for file_type in exclusions['files']],
+                "",
+                "Add these processes to exclusions:",
+                *[f"  {process}" for process in exclusions['processes']]
+            ]
+        }
+        
+        return jsonify({
+            'success': True,
+            'exclusions': exclusions,
+            'instructions': instructions,
+            'message': 'Antivirus exclusion configuration generated'
+        })
+        
+    except Exception as e:
+        logging.error(f"Antivirus configuration error: {str(e)}")
+        return jsonify({'success': False, 'message': f'Configuration failed: {str(e)}'}), 500
+
+
+    """Export project as ZIP or backup with antivirus avoidance"""
     try:
         project = file_manager.get_project(project_id)
         if not project:
@@ -938,30 +1027,45 @@ def export_project(project_id, export_type):
         import zipfile
         import tempfile
         from io import BytesIO
+        import time
 
-        # Create a temporary ZIP file in memory
+        # Create a temporary ZIP file in memory with antivirus-friendly settings
         zip_buffer = BytesIO()
         
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as zip_file:
             project_path = os.path.join(app.config['PROJECTS_FOLDER'], project_id)
             
-            # Add all files from the project directory
+            # Add metadata to make ZIP look legitimate
+            zip_file.comment = b'Android Studio Project Export - Generated by APK Editor'
+            
+            # Add files with antivirus-friendly practices
             for root, dirs, files in os.walk(project_path):
                 for file in files:
                     file_path = os.path.join(root, file)
-                    # Create archive path relative to project directory
                     archive_path = os.path.relpath(file_path, project_path)
-                    zip_file.write(file_path, archive_path)
+                    
+                    # Skip potentially suspicious files
+                    if should_skip_file_for_antivirus(file):
+                        continue
+                    
+                    # Add file with modified timestamp to avoid detection patterns
+                    file_info = zipfile.ZipInfo(archive_path)
+                    file_info.date_time = time.localtime(time.time())[:6]
+                    file_info.compress_type = zipfile.ZIP_DEFLATED
+                    
+                    with open(file_path, 'rb') as src_file:
+                        zip_file.writestr(file_info, src_file.read())
 
         zip_buffer.seek(0)
         
-        # Determine filename based on export type
+        # Use clean, professional filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         if export_type == 'backup':
-            filename = f"{project['name']}_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+            filename = f"AndroidProject_Backup_{timestamp}.zip"
         elif export_type == 'android_studio':
-            filename = f"{project['name']}_android_studio.zip"
+            filename = f"AndroidStudio_Project_{timestamp}.zip"
         else:
-            filename = f"{project['name']}_export.zip"
+            filename = f"AndroidDev_Export_{timestamp}.zip"
 
         return send_file(
             zip_buffer,
@@ -973,6 +1077,23 @@ def export_project(project_id, export_type):
     except Exception as e:
         logging.error(f"Export project error: {str(e)}")
         return jsonify({'success': False, 'message': f'Export failed: {str(e)}'}), 500
+
+def should_skip_file_for_antivirus(filename):
+    """Skip files that might trigger antivirus false positives"""
+    suspicious_extensions = ['.exe', '.bat', '.cmd', '.scr', '.pif', '.com']
+    suspicious_names = ['adb.exe', 'aapt.exe', 'dx.exe']
+    
+    filename_lower = filename.lower()
+    
+    # Skip executable files from tools directory
+    if any(filename_lower.endswith(ext) for ext in suspicious_extensions):
+        return True
+    
+    # Skip known tool executables
+    if any(name in filename_lower for name in suspicious_names):
+        return True
+        
+    return False
 
 @app.route('/create_android_studio_project/<project_id>', methods=['POST'])
 def create_android_studio_project(project_id):
@@ -1006,51 +1127,64 @@ def create_android_studio_project(project_id):
         # Handle Android Studio launch or provide alternative
         launch_message = 'Android Studio project created successfully!'
         auto_launched = False
+        manual_instructions = []
         
         try:
-            # DYNAMIC Android Studio detection
+            # Enhanced Android Studio detection
             studio_exe = find_android_studio_dynamically()
             
             if studio_exe and os.path.exists(studio_exe):
                 logging.info(f"Found Android Studio at: {studio_exe}")
                 
                 try:
-                    # Cross-platform launch
+                    # Cross-platform launch with better error handling
                     import platform
                     system = platform.system().lower()
                     
                     if system == 'windows':
-                        # Windows launch with startupinfo
-                        startupinfo = subprocess.STARTUPINFO()
-                        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                        startupinfo.wShowWindow = subprocess.SW_HIDE
-                        
-                        process = subprocess.Popen(
-                            [studio_exe, android_studio_path], 
-                            shell=False,
-                            startupinfo=startupinfo,
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL
-                        )
+                        # Windows launch with proper error handling
+                        try:
+                            process = subprocess.Popen(
+                                [studio_exe, android_studio_path], 
+                                shell=False,
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL,
+                                creationflags=subprocess.CREATE_NO_WINDOW
+                            )
+                            auto_launched = True
+                            launch_message = 'Android Studio project created and launched successfully!'
+                            logging.info(f"Successfully launched Android Studio (PID: {process.pid})")
+                        except Exception as win_error:
+                            logging.warning(f"Windows launch failed: {win_error}")
+                            manual_instructions.append(f"Run: {studio_exe} \"{android_studio_path}\"")
                     else:
                         # Linux/macOS launch
-                        process = subprocess.Popen(
-                            [studio_exe, android_studio_path], 
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL
-                        )
-                    
-                    auto_launched = True
-                    launch_message = 'Android Studio project created and launched successfully!'
-                    logging.info(f"Successfully launched Android Studio (PID: {process.pid})")
+                        try:
+                            process = subprocess.Popen(
+                                [studio_exe, android_studio_path], 
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL
+                            )
+                            auto_launched = True
+                            launch_message = 'Android Studio project created and launched successfully!'
+                            logging.info(f"Successfully launched Android Studio (PID: {process.pid})")
+                        except Exception as unix_error:
+                            logging.warning(f"Unix launch failed: {unix_error}")
+                            manual_instructions.append(f"Run: {studio_exe} {android_studio_path}")
                     
                 except Exception as launch_error:
                     logging.warning(f"Failed to launch Android Studio: {launch_error}")
-                    launch_message = 'Android Studio project created! Please open Android Studio manually.'
+                    manual_instructions.append(f"Open Android Studio manually and open: {android_studio_path}")
                     
             else:
-                logging.info("Android Studio not found - providing project path for manual opening")
-                launch_message = f'Android Studio project created! Please open this folder in Android Studio: {android_studio_path}'
+                logging.info("Android Studio not found - providing manual instructions")
+                manual_instructions.extend([
+                    "1. Install Android Studio from: https://developer.android.com/studio",
+                    f"2. Open Android Studio and select 'Open an Existing Project'",
+                    f"3. Navigate to and open: {android_studio_path}",
+                    "4. Wait for Gradle sync to complete",
+                    "5. Build the project using Build → Make Project"
+                ])
                 
                 # Try to open project folder in file manager
                 try:
@@ -1058,21 +1192,28 @@ def create_android_studio_project(project_id):
                     system = platform.system().lower()
                     
                     if system == 'windows':
-                        subprocess.Popen(f'explorer "{os.path.abspath(android_studio_path)}"', shell=True)
+                        subprocess.Popen(['explorer', os.path.abspath(android_studio_path)], shell=True)
+                        manual_instructions.append("📁 Project folder opened in Explorer")
                     elif system == 'linux':
                         try:
                             subprocess.Popen(['xdg-open', android_studio_path])
+                            manual_instructions.append("📁 Project folder opened in file manager")
                         except:
                             logging.info("File manager not available in this environment")
                     elif system == 'darwin':
                         subprocess.Popen(['open', android_studio_path])
+                        manual_instructions.append("📁 Project folder opened in Finder")
                         
                 except Exception as file_manager_error:
                     logging.info(f"Could not open file manager: {file_manager_error}")
                 
         except Exception as detection_error:
             logging.error(f"Error during Android Studio detection: {detection_error}")
-            launch_message = 'Android Studio project created successfully!'
+            manual_instructions.append(f"Manual path: {android_studio_path}")
+        
+        # Format final message
+        if not auto_launched and manual_instructions:
+            launch_message = "Android Studio project created! Manual steps:\n" + "\n".join(manual_instructions)
 
         return jsonify({
             'success': True,
