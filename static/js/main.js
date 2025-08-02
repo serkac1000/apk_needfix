@@ -366,7 +366,7 @@ function openOutputFolder(projectId) {
 function copyOutputPath(projectId) {
     const path = `projects/${projectId}/decompiled/`;
     const fullPath = `${window.location.origin}/${path}`;
-    
+
     if (window.APKEditor) {
         window.APKEditor.copyToClipboard(fullPath);
     } else {
@@ -399,29 +399,46 @@ function showOutputInfo(projectId) {
     });
 }
 
-function openResourceFolder(projectId, resourceType) {
-    fetch(`/open_resource_folder/${projectId}/${resourceType}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        }
+// Handle project actions
+function openOutputFolder(projectId) {
+    fetch(`/open_output_folder/${projectId}`, {
+        method: 'POST'
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            window.APKEditor.showNotification(`Opening ${resourceType} folder...`, 'success');
+            showNotification(data.message, 'success');
         } else {
-            window.APKEditor.showNotification(`Failed to open ${resourceType} folder: ${data.message}`, 'error');
+            showNotification(data.message, 'error');
         }
     })
     .catch(error => {
-        window.APKEditor.showNotification(`Failed to open ${resourceType} folder: Network error`, 'error');
+        console.error('Error:', error);
+        showNotification('Failed to open output folder', 'error');
+    });
+}
+
+function openResourceFolder(projectId, resourceType) {
+    fetch(`/open_resource_folder/${projectId}/${resourceType}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+        } else {
+            showNotification(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Failed to open ' + resourceType + ' folder', 'error');
     });
 }
 
 function exportProject(projectId, exportType) {
     window.APKEditor.showLoadingOverlay(`Exporting project as ${exportType.toUpperCase()}...`);
-    
+
     fetch(`/export_project/${projectId}/${exportType}`, {
         method: 'POST',
         headers: {
@@ -445,7 +462,7 @@ function exportProject(projectId, exportType) {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        
+
         window.APKEditor.showNotification(`Project exported successfully!`, 'success');
     })
     .catch(error => {

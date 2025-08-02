@@ -24,94 +24,99 @@ except ImportError as e:
             return ""
 
 def find_android_studio_dynamically():
-    """Dynamically find Android Studio installation"""
+    """Dynamically find Android Studio installation - works on both Windows and Linux"""
     import glob
+    import platform
     
-    username = os.getenv('USERNAME', '')
+    system = platform.system().lower()
     
-    # Common Android Studio installation paths
-    android_studio_paths = [
-        r"C:\Program Files\Android\Android Studio\bin\studio64.exe",
-        r"C:\Program Files (x86)\Android\Android Studio\bin\studio64.exe",
-        rf"C:\Users\{username}\AppData\Local\Android\Studio\bin\studio64.exe",
-        rf"C:\Users\{username}\AppData\Roaming\JetBrains\Toolbox\apps\AndroidStudio\ch-0\*\bin\studio64.exe",
-        r"C:\Android\Android Studio\bin\studio64.exe",
-        "studio64.exe",  # If in PATH
-        "studio.exe"     # Alternative name
-    ]
-    
-    # Try each path
-    for path in android_studio_paths:
-        if '*' in path:
-            # Handle wildcard paths (like Toolbox installations)
-            matches = glob.glob(path)
-            if matches:
-                for match in matches:
-                    if os.path.exists(match):
-                        logging.info(f"Found Android Studio at: {match}")
-                        return match
-        elif os.path.exists(path):
-            logging.info(f"Found Android Studio at: {path}")
-            return path
-    
-    # Try to find in common program directories
-    program_dirs = [
-        r"C:\Program Files",
-        r"C:\Program Files (x86)",
-        rf"C:\Users\{username}\AppData\Local",
-        rf"C:\Users\{username}\AppData\Roaming\JetBrains\Toolbox\apps"
-    ]
-    
-    for prog_dir in program_dirs:
-        if os.path.exists(prog_dir):
-            # Search for Android Studio in subdirectories
-            android_pattern = os.path.join(prog_dir, "**", "*Android*Studio*", "bin", "studio64.exe")
-            matches = glob.glob(android_pattern, recursive=True)
-            if matches:
-                studio_path = matches[0]
-                logging.info(f"Found Android Studio at: {studio_path}")
-                return studio_path
-    
-    # Try to find using 'where' command (Windows)
-    try:
-        import subprocess
-        result = subprocess.run(['where', 'studio64'], capture_output=True, text=True, shell=True)
-        if result.returncode == 0 and result.stdout.strip():
-            studio_path = result.stdout.strip().split('\n')[0]
-            if os.path.exists(studio_path):
-                logging.info(f"Found Android Studio via 'where' command: {studio_path}")
-                return studio_path
-    except Exception as e:
-        logging.debug(f"'where' command failed: {e}")
-    
-    # Check Windows Registry for Android Studio
-    try:
-        import winreg
+    if system == 'windows':
+        username = os.getenv('USERNAME', '')
         
-        # Check HKEY_LOCAL_MACHINE for Android Studio
-        reg_paths = [
-            r"SOFTWARE\Android Studio",
-            r"SOFTWARE\WOW6432Node\Android Studio",
-            r"SOFTWARE\JetBrains\Android Studio"
+        # Windows Android Studio paths
+        android_studio_paths = [
+            r"C:\Program Files\Android\Android Studio\bin\studio64.exe",
+            r"C:\Program Files (x86)\Android\Android Studio\bin\studio64.exe",
+            rf"C:\Users\{username}\AppData\Local\Android\Studio\bin\studio64.exe",
+            rf"C:\Users\{username}\AppData\Roaming\JetBrains\Toolbox\apps\AndroidStudio\ch-0\*\bin\studio64.exe",
+            r"C:\Android\Android Studio\bin\studio64.exe",
+            "studio64.exe",  # If in PATH
+            "studio.exe"     # Alternative name
         ]
         
-        for reg_path in reg_paths:
-            try:
-                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, reg_path) as key:
-                    install_path, _ = winreg.QueryValueEx(key, "Path")
-                    studio_exe = os.path.join(install_path, "bin", "studio64.exe")
-                    if os.path.exists(studio_exe):
-                        logging.info(f"Found Android Studio via registry: {studio_exe}")
-                        return studio_exe
-            except (FileNotFoundError, OSError):
-                continue
-                
-    except ImportError:
-        logging.debug("winreg module not available (not on Windows)")
-    except Exception as e:
-        logging.debug(f"Registry search failed: {e}")
+        # Try each path
+        for path in android_studio_paths:
+            if '*' in path:
+                matches = glob.glob(path)
+                if matches:
+                    for match in matches:
+                        if os.path.exists(match):
+                            logging.info(f"Found Android Studio at: {match}")
+                            return match
+            elif os.path.exists(path):
+                logging.info(f"Found Android Studio at: {path}")
+                return path
+        
+        # Try Windows registry
+        try:
+            import winreg
+            reg_paths = [
+                r"SOFTWARE\Android Studio",
+                r"SOFTWARE\WOW6432Node\Android Studio",
+                r"SOFTWARE\JetBrains\Android Studio"
+            ]
+            
+            for reg_path in reg_paths:
+                try:
+                    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, reg_path) as key:
+                        install_path, _ = winreg.QueryValueEx(key, "Path")
+                        studio_exe = os.path.join(install_path, "bin", "studio64.exe")
+                        if os.path.exists(studio_exe):
+                            logging.info(f"Found Android Studio via registry: {studio_exe}")
+                            return studio_exe
+                except (FileNotFoundError, OSError):
+                    continue
+        except ImportError:
+            pass
+            
+    elif system == 'linux':
+        # Linux Android Studio paths
+        home = os.path.expanduser('~')
+        android_studio_paths = [
+            '/opt/android-studio/bin/studio.sh',
+            f'{home}/android-studio/bin/studio.sh',
+            f'{home}/.local/share/JetBrains/Toolbox/apps/AndroidStudio/ch-0/*/bin/studio.sh',
+            '/usr/local/android-studio/bin/studio.sh',
+            '/snap/android-studio/current/bin/studio.sh',
+            'studio.sh',  # If in PATH
+            'android-studio'  # Alternative command
+        ]
+        
+        for path in android_studio_paths:
+            if '*' in path:
+                matches = glob.glob(path)
+                if matches:
+                    for match in matches:
+                        if os.path.exists(match) and os.access(match, os.X_OK):
+                            logging.info(f"Found Android Studio at: {match}")
+                            return match
+            elif os.path.exists(path) and os.access(path, os.X_OK):
+                logging.info(f"Found Android Studio at: {path}")
+                return path
+        
+        # Try which command for Linux
+        try:
+            import subprocess
+            for cmd in ['studio.sh', 'android-studio']:
+                result = subprocess.run(['which', cmd], capture_output=True, text=True)
+                if result.returncode == 0 and result.stdout.strip():
+                    studio_path = result.stdout.strip()
+                    logging.info(f"Found Android Studio via which: {studio_path}")
+                    return studio_path
+        except Exception as e:
+            logging.debug(f"which command failed: {e}")
     
-    logging.warning("Android Studio not found - using fallback")
+    logging.warning("Android Studio not found - project will be created but not auto-opened")
     return None
 
     def save_image_resource(self, *args, **kwargs):
@@ -752,9 +757,27 @@ def open_output_folder(project_id):
         if not os.path.exists(output_path):
             return jsonify({'success': False, 'message': 'Output folder not found'}), 404
 
-        # Open folder in Windows Explorer
+        # Open folder in file manager (cross-platform)
         import subprocess
-        subprocess.Popen(f'explorer "{os.path.abspath(output_path)}"', shell=True)
+        import platform
+        
+        system = platform.system().lower()
+        if system == 'windows':
+            subprocess.Popen(f'explorer "{os.path.abspath(output_path)}"', shell=True)
+        elif system == 'linux':
+            # Try common Linux file managers
+            try:
+                subprocess.Popen(['xdg-open', output_path])
+            except:
+                try:
+                    subprocess.Popen(['nautilus', output_path])
+                except:
+                    try:
+                        subprocess.Popen(['dolphin', output_path])
+                    except:
+                        logging.info(f"File manager not available, path: {output_path}")
+        elif system == 'darwin':  # macOS
+            subprocess.Popen(['open', output_path])
         
         return jsonify({
             'success': True,
@@ -872,9 +895,27 @@ def open_resource_folder(project_id, resource_type):
         if not os.path.exists(resource_path):
             return jsonify({'success': False, 'message': f'{resource_type.title()} folder not found'}), 404
 
-        # Open folder in Windows Explorer
+        # Open folder in file manager (cross-platform)
         import subprocess
-        subprocess.Popen(f'explorer "{os.path.abspath(resource_path)}"', shell=True)
+        import platform
+        
+        system = platform.system().lower()
+        if system == 'windows':
+            subprocess.Popen(f'explorer "{os.path.abspath(resource_path)}"', shell=True)
+        elif system == 'linux':
+            # Try common Linux file managers
+            try:
+                subprocess.Popen(['xdg-open', resource_path])
+            except:
+                try:
+                    subprocess.Popen(['nautilus', resource_path])
+                except:
+                    try:
+                        subprocess.Popen(['dolphin', resource_path])
+                    except:
+                        logging.info(f"File manager not available, path: {resource_path}")
+        elif system == 'darwin':  # macOS
+            subprocess.Popen(['open', resource_path])
         
         return jsonify({
             'success': True,
@@ -962,7 +1003,7 @@ def create_android_studio_project(project_id):
             'status': 'android_studio_ready'
         })
 
-        # AUTOMATICALLY LAUNCH ANDROID STUDIO after creating project
+        # Handle Android Studio launch or provide alternative
         launch_message = 'Android Studio project created successfully!'
         auto_launched = False
         
@@ -970,88 +1011,67 @@ def create_android_studio_project(project_id):
             # DYNAMIC Android Studio detection
             studio_exe = find_android_studio_dynamically()
             
-            # Verify the found path exists
             if studio_exe and os.path.exists(studio_exe):
                 logging.info(f"Found Android Studio at: {studio_exe}")
                 
-                # Try multiple launch methods with better error handling
-                launch_success = False
-                
-                # Method 1: Direct launch with project path
                 try:
-                    # Use startupinfo to hide console window
-                    startupinfo = subprocess.STARTUPINFO()
-                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                    startupinfo.wShowWindow = subprocess.SW_HIDE
+                    # Cross-platform launch
+                    import platform
+                    system = platform.system().lower()
                     
-                    process = subprocess.Popen(
-                        [studio_exe, android_studio_path], 
-                        shell=False,
-                        startupinfo=startupinfo,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
-                    )
-                    launch_success = True
-                    auto_launched = True
-                    launch_message = 'Android Studio project created and launched successfully!'
-                    logging.info(f"Method 1 success: Launched Android Studio with project (PID: {process.pid})")
-                except Exception as e1:
-                    logging.warning(f"Method 1 failed: {e1}")
-                
-                # Method 2: Launch Android Studio only (fallback)
-                if not launch_success:
-                    try:
+                    if system == 'windows':
+                        # Windows launch with startupinfo
                         startupinfo = subprocess.STARTUPINFO()
                         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                         startupinfo.wShowWindow = subprocess.SW_HIDE
                         
                         process = subprocess.Popen(
-                            [studio_exe], 
+                            [studio_exe, android_studio_path], 
                             shell=False,
                             startupinfo=startupinfo,
                             stdout=subprocess.DEVNULL,
                             stderr=subprocess.DEVNULL
                         )
-                        launch_success = True
-                        auto_launched = True
-                        launch_message = 'Android Studio project created and launched! Please open the project manually in Android Studio.'
-                        logging.info(f"Method 2 success: Launched Android Studio (PID: {process.pid})")
-                    except Exception as e2:
-                        logging.warning(f"Method 2 failed: {e2}")
-                
-                # Method 3: Use shell=True as last resort
-                if not launch_success:
-                    try:
+                    else:
+                        # Linux/macOS launch
                         process = subprocess.Popen(
-                            f'start "" "{studio_exe}" "{android_studio_path}"', 
-                            shell=True,
+                            [studio_exe, android_studio_path], 
                             stdout=subprocess.DEVNULL,
                             stderr=subprocess.DEVNULL
                         )
-                        launch_success = True
-                        auto_launched = True
-                        launch_message = 'Android Studio project created and launched successfully!'
-                        logging.info(f"Method 3 success: Launched with shell=True")
-                    except Exception as e3:
-                        logging.warning(f"Method 3 failed: {e3}")
-                
-                if not launch_success:
+                    
+                    auto_launched = True
+                    launch_message = 'Android Studio project created and launched successfully!'
+                    logging.info(f"Successfully launched Android Studio (PID: {process.pid})")
+                    
+                except Exception as launch_error:
+                    logging.warning(f"Failed to launch Android Studio: {launch_error}")
                     launch_message = 'Android Studio project created! Please open Android Studio manually.'
-                    logging.warning("All launch methods failed")
                     
             else:
-                logging.warning("Android Studio not found with dynamic detection")
-                # Fallback: open folder in Explorer
-                try:
-                    subprocess.Popen(f'explorer "{os.path.abspath(android_studio_path)}"', shell=True)
-                    launch_message = 'Android Studio project created! Opening project folder (Android Studio not found).'
-                    logging.info("Opened project folder in Explorer")
-                except Exception as explorer_error:
-                    logging.error(f"Failed to open Explorer: {explorer_error}")
-                    launch_message = 'Android Studio project created successfully!'
+                logging.info("Android Studio not found - providing project path for manual opening")
+                launch_message = f'Android Studio project created! Please open this folder in Android Studio: {android_studio_path}'
                 
-        except Exception as launch_error:
-            logging.error(f"Failed to auto-launch Android Studio: {launch_error}")
+                # Try to open project folder in file manager
+                try:
+                    import platform
+                    system = platform.system().lower()
+                    
+                    if system == 'windows':
+                        subprocess.Popen(f'explorer "{os.path.abspath(android_studio_path)}"', shell=True)
+                    elif system == 'linux':
+                        try:
+                            subprocess.Popen(['xdg-open', android_studio_path])
+                        except:
+                            logging.info("File manager not available in this environment")
+                    elif system == 'darwin':
+                        subprocess.Popen(['open', android_studio_path])
+                        
+                except Exception as file_manager_error:
+                    logging.info(f"Could not open file manager: {file_manager_error}")
+                
+        except Exception as detection_error:
+            logging.error(f"Error during Android Studio detection: {detection_error}")
             launch_message = 'Android Studio project created successfully!'
 
         return jsonify({
