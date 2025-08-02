@@ -1,0 +1,360 @@
+
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APK Editor - AI-Powered APK Modification Tool</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i data-feather="package"></i>
+                APK Editor Pro
+            </a>
+            <div class="navbar-text">
+                AI-Powered APK Modification Tool
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Gemini AI Configuration Section -->
+        <div class="card mb-4 border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="card-title mb-0">
+                    <i data-feather="zap"></i>
+                    AI Configuration - Gemini API Setup
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="alert alert-info">
+                            <i data-feather="info"></i>
+                            <strong>Enable AI-Powered Code Generation & APK Editing</strong><br>
+                            Enter your Google Gemini API key to enable advanced AI features for automatic code generation and intelligent APK modifications.
+                        </div>
+                        
+                        <form method="POST" action="{{ url_for('save_gemini_key') }}" id="api-key-form" class="mb-3">
+                            <div class="mb-3">
+                                <label for="gemini_api_key" class="form-label">
+                                    <strong>Gemini API Key</strong>
+                                    <span class="badge bg-{{ 'success' if gemini_enabled else 'secondary' }}">
+                                        {{ 'Configured' if gemini_enabled else 'Not Set' }}
+                                    </span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control form-control-lg" id="gemini_api_key" name="gemini_api_key" 
+                                           placeholder="Enter your Gemini API key (AIza...)" 
+                                           value="{{ '***configured***' if gemini_enabled else '' }}">
+                                    <button type="button" class="btn btn-outline-secondary" id="toggle-key-visibility">
+                                        <i data-feather="eye"></i>
+                                    </button>
+                                </div>
+                                <div class="form-text">
+                                    Get your free API key from <a href="https://makersuite.google.com/app/apikey" target="_blank" class="text-warning">Google AI Studio</a>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-warning btn-lg">
+                                    <i data-feather="save"></i>
+                                    Save API Key
+                                </button>
+                                {% if gemini_enabled %}
+                                <button type="button" class="btn btn-success" id="test-ai-btn">
+                                    <i data-feather="play"></i>
+                                    Test AI Connection
+                                </button>
+                                {% endif %}
+                            </div>
+                        </form>
+
+                        {% if not gemini_enabled %}
+                        <div class="alert alert-warning">
+                            <i data-feather="alert-triangle"></i>
+                            <strong>AI features are currently using fallback mode.</strong> Enter your API key above for full AI functionality including intelligent code generation and automatic APK analysis.
+                        </div>
+                        {% else %}
+                        <div class="alert alert-success">
+                            <i data-feather="check-circle"></i>
+                            <strong>AI features are enabled and ready!</strong> You can now use advanced AI-powered APK editing and code generation.
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-dark">
+                            <div class="card-body text-center">
+                                <i data-feather="cpu" class="text-warning mb-3" style="width: 48px; height: 48px;"></i>
+                                <h6>AI Features</h6>
+                                <ul class="list-unstyled text-start">
+                                    <li><i data-feather="check" class="text-success"></i> Smart APK Analysis</li>
+                                    <li><i data-feather="check" class="text-success"></i> Auto Code Generation</li>
+                                    <li><i data-feather="check" class="text-success"></i> GUI Modifications</li>
+                                    <li><i data-feather="check" class="text-success"></i> Resource Optimization</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload APK Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="upload"></i>
+                    Upload APK File
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('upload_apk') }}" enctype="multipart/form-data">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="apk_file" class="form-label">Select APK File</label>
+                                <input type="file" class="form-control form-control-lg" id="apk_file" name="apk_file" 
+                                       accept=".apk" required>
+                                <div class="form-text">Choose an APK file to decompile and edit (Max: 100MB)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="project_name" class="form-label">Project Name</label>
+                                <input type="text" class="form-control form-control-lg" id="project_name" name="project_name" 
+                                       placeholder="Enter project name (optional)">
+                                <div class="form-text">Give your project a custom name</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i data-feather="upload"></i>
+                            Upload & Decompile APK
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- AI Function Generator -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="code"></i>
+                    AI Code Generator
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('generate_function') }}" enctype="multipart/form-data" id="generate-function-form">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="function_prompt" class="form-label">Describe the function you want to generate</label>
+                                <textarea class="form-control" id="function_prompt" name="function_prompt" rows="4" 
+                                    placeholder="Example: Create a button that changes color when pressed, Add a login screen with validation, Generate a camera capture function..."></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="design_images" class="form-label">Design References (Optional)</label>
+                                <input type="file" class="form-control" id="design_images" name="design_images" 
+                                       accept="image/*" multiple>
+                                <div class="form-text">Upload images for AI reference</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-success">
+                            <i data-feather="zap"></i>
+                            Generate Code with AI
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Existing Projects -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="folder"></i>
+                    Your Projects ({{ projects|length }})
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if projects %}
+                    <div class="row">
+                        {% for project in projects %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card h-100 border-secondary">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ project.name }}</h6>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i data-feather="file"></i> {{ project.original_apk }}<br>
+                                            <i data-feather="calendar"></i> {{ project.created_at[:10] }}<br>
+                                            <i data-feather="hard-drive"></i> {{ project.size | default(0) | filesizeformat }}
+                                        </small>
+                                    </p>
+                                    <div class="mb-2">
+                                        {% if project.has_compiled %}
+                                            <span class="badge bg-success">Compiled</span>
+                                        {% endif %}
+                                        {% if project.has_signed %}
+                                            <span class="badge bg-info">Signed</span>
+                                        {% endif %}
+                                        <span class="badge bg-secondary">{{ project.status | default('ready') | title }}</span>
+                                    </div>
+                                    <div class="btn-group w-100">
+                                        <a href="{{ url_for('project_view', project_id=project.id) }}" class="btn btn-primary btn-sm">
+                                            <i data-feather="edit"></i> Edit
+                                        </a>
+                                        {% if project.has_compiled or project.has_signed %}
+                                            <a href="{{ url_for('download_apk', project_id=project.id) }}" class="btn btn-success btn-sm">
+                                                <i data-feather="download"></i> Download
+                                            </a>
+                                        {% endif %}
+                                        <a href="{{ url_for('delete_project', project_id=project.id) }}" 
+                                           class="btn btn-danger btn-sm"
+                                           onclick="return confirm('Are you sure you want to delete this project?')">
+                                            <i data-feather="trash"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i data-feather="package" class="text-muted mb-3" style="width: 64px; height: 64px;"></i>
+                        <h5 class="text-muted">No projects yet</h5>
+                        <p class="text-muted">Upload an APK file above to get started</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Info Section -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="info"></i>
+                    About APK Editor Pro
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <i data-feather="shield" class="text-primary mb-2" style="width: 32px; height: 32px;"></i>
+                            <h6>Secure</h6>
+                            <p class="small text-muted">All processing happens locally. Your APKs never leave this environment.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <i data-feather="zap" class="text-warning mb-2" style="width: 32px; height: 32px;"></i>
+                            <h6>AI-Powered</h6>
+                            <p class="small text-muted">Advanced AI assists with code generation and intelligent modifications.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <i data-feather="layers" class="text-success mb-2" style="width: 32px; height: 32px;"></i>
+                            <h6>Complete</h6>
+                            <p class="small text-muted">Decompile, edit, compile, and sign APKs with full functionality.</p>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="text-center">
+                    <button type="button" class="btn btn-outline-info" onclick="showAPKToolInfo()">
+                        <i data-feather="help-circle"></i>
+                        How it works
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- APKTool Info Modal -->
+    <div class="modal fade" id="apktoolModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">How APK Editor Works</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i data-feather="upload"></i> 1. Upload & Decompile</h6>
+                            <p class="small">Your APK is decompiled into readable resources including images, layouts, and strings.</p>
+                            
+                            <h6><i data-feather="edit"></i> 2. Edit Resources</h6>
+                            <p class="small">Modify app resources like images, text, colors, and layouts using our intuitive interface.</p>
+                            
+                            <h6><i data-feather="package"></i> 3. Compile & Sign</h6>
+                            <p class="small">Your changes are compiled back into a working APK and automatically signed for installation.</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i data-feather="cpu"></i> AI Features</h6>
+                            <ul class="small">
+                                <li>Intelligent code generation</li>
+                                <li>Automatic GUI modifications</li>
+                                <li>Smart resource optimization</li>
+                                <li>Context-aware suggestions</li>
+                            </ul>
+                            
+                            <h6><i data-feather="shield"></i> Security</h6>
+                            <p class="small">All processing happens in this secure environment. No data is sent to external servers except for AI features (when enabled).</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        feather.replace();
+
+        function showAPKToolInfo() {
+            const modal = new bootstrap.Modal(document.getElementById('apktoolModal'));
+            modal.show();
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Replace feather icons
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
+        });
+    </script>
+</body>
+</html>
