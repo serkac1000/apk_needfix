@@ -322,6 +322,179 @@ function showAPKToolInfo() {
     }
 }
 
+function browseForStudioPath() {
+    // Since we can't actually browse files in web, provide platform-specific hints
+    const platform = navigator.platform.toLowerCase();
+    let suggestion = '';
+    
+    if (platform.includes('win')) {
+        suggestion = 'C:\\Program Files\\Android\\Android Studio\\bin\\studio64.exe';
+    } else if (platform.includes('mac')) {
+        suggestion = '/Applications/Android Studio.app/Contents/MacOS/studio';
+    } else {
+        suggestion = '/opt/android-studio/bin/studio.sh';
+    }
+    
+    const input = document.getElementById('android_studio_path');
+    if (input && !input.value) {
+        input.value = suggestion;
+    }
+    
+    // Show helpful modal
+    showStudioPathModal();
+}
+
+function showStudioPathModal() {
+    const modalHTML = `
+        <div class="modal fade" id="studioPathModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i data-feather="folder"></i>
+                            Find Android Studio Path
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <h6>Common Android Studio Locations:</h6>
+                        <div class="mb-3">
+                            <strong>Windows:</strong>
+                            <ul class="small">
+                                <li><code>C:\\Program Files\\Android\\Android Studio\\bin\\studio64.exe</code></li>
+                                <li><code>C:\\Users\\[Username]\\AppData\\Local\\Android\\Studio\\bin\\studio64.exe</code></li>
+                            </ul>
+                        </div>
+                        <div class="mb-3">
+                            <strong>macOS:</strong>
+                            <ul class="small">
+                                <li><code>/Applications/Android Studio.app/Contents/MacOS/studio</code></li>
+                            </ul>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Linux:</strong>
+                            <ul class="small">
+                                <li><code>/opt/android-studio/bin/studio.sh</code></li>
+                                <li><code>~/android-studio/bin/studio.sh</code></li>
+                            </ul>
+                        </div>
+                        <div class="alert alert-info">
+                            <small>Copy the full path to the executable file and paste it in the configuration field.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal
+    const existingModal = document.getElementById('studioPathModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add modal to page
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('studioPathModal'));
+    modal.show();
+    
+    // Replace feather icons
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+}
+
+function showAntivirusHelp() {
+    const modalHTML = `
+        <div class="modal fade" id="antivirusHelpModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i data-feather="shield"></i>
+                            Antivirus Configuration - Prevent Wacatac.B!ml Detection
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <strong>Why are APK tools detected as malware?</strong><br>
+                            Tools like apktool.jar are legitimate Android development utilities, but antivirus software may flag them as 
+                            Trojan:Script/Wacatac.B!ml due to their ability to modify Android applications.
+                        </div>
+                        
+                        <h6>Required Exclusions:</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Folders to Exclude:</h6>
+                                <ul class="small">
+                                    <li><code>${window.location.origin}</code></li>
+                                    <li><code>projects/</code></li>
+                                    <li><code>tools/</code></li>
+                                    <li><code>temp/</code></li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>File Types:</h6>
+                                <ul class="small">
+                                    <li><code>*.apk</code> files</li>
+                                    <li><code>apktool.jar</code></li>
+                                    <li><code>adb.exe</code></li>
+                                    <li><code>*.jar</code> files in tools/</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <h6>Windows Defender Instructions:</h6>
+                        <ol class="small">
+                            <li>Open Windows Security</li>
+                            <li>Go to "Virus & threat protection"</li>
+                            <li>Click "Manage settings" under "Virus & threat protection settings"</li>
+                            <li>Click "Add or remove exclusions"</li>
+                            <li>Add folder exclusions for the paths above</li>
+                        </ol>
+                        
+                        <div class="alert alert-info mt-3">
+                            <strong>Safe Usage:</strong> These tools are used only for legitimate Android development. 
+                            The exclusions ensure smooth operation while maintaining system security.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <a href="/antivirus_help" class="btn btn-primary">
+                            <i data-feather="external-link"></i>
+                            Detailed Guide
+                        </a>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal
+    const existingModal = document.getElementById('antivirusHelpModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add modal to page
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('antivirusHelpModal'));
+    modal.show();
+    
+    // Replace feather icons
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+}
+
 function testAI() {
     fetch('/test_ai', {
         method: 'POST',

@@ -36,12 +36,93 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Gemini AI Configuration Section -->
+        <!-- Android Studio Path Configuration -->
+        <div class="card mb-4 border-info">
+            <div class="card-header bg-info text-dark">
+                <h5 class="card-title mb-0">
+                    <i data-feather="settings"></i>
+                    Android Studio Configuration
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i data-feather="info"></i>
+                    <strong>Configure Android Studio Path</strong><br>
+                    Set a custom path to your Android Studio installation for automatic project opening and enhanced functionality.
+                </div>
+                
+                <form method="POST" action="{{ url_for('save_android_studio_path') }}" class="mb-3">
+                    <div class="mb-3">
+                        <label for="android_studio_path" class="form-label">
+                            <strong>Android Studio Executable Path</strong>
+                        </label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="android_studio_path" name="android_studio_path" 
+                                   placeholder="C:\Program Files\Android\Android Studio\bin\studio64.exe"
+                                   value="{{ os.environ.get('ANDROID_STUDIO_PATH', '') }}">
+                            <button type="button" class="btn btn-outline-secondary" onclick="browseForStudioPath()">
+                                <i data-feather="folder"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            Examples:<br>
+                            Windows: <code>C:\Program Files\Android\Android Studio\bin\studio64.exe</code><br>
+                            Linux: <code>/opt/android-studio/bin/studio.sh</code><br>
+                            macOS: <code>/Applications/Android Studio.app/Contents/MacOS/studio</code>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-info">
+                        <i data-feather="save"></i>
+                        Save Android Studio Path
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Antivirus Configuration Section -->
         <div class="card mb-4 border-warning">
             <div class="card-header bg-warning text-dark">
                 <h5 class="card-title mb-0">
+                    <i data-feather="shield"></i>
+                    Antivirus Configuration - Wacatac.B!ml Prevention
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i data-feather="alert-triangle"></i>
+                    <strong>Antivirus False Positive Prevention</strong><br>
+                    APK tools may trigger false positives like Trojan:Script/Wacatac.B!ml. Configure your antivirus exclusions for smooth operation.
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-8">
+                        <h6>Required Exclusions:</h6>
+                        <ul class="small">
+                            <li><strong>Folders:</strong> <code>{{ os.path.abspath('.') }}</code></li>
+                            <li><strong>Files:</strong> <code>apktool.jar</code>, <code>adb.exe</code>, <code>*.apk</code></li>
+                            <li><strong>Processes:</strong> <code>python.exe</code>, <code>java.exe</code></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-warning" onclick="showAntivirusHelp()">
+                            <i data-feather="help-circle"></i>
+                            Configure Antivirus
+                        </button>
+                        <a href="{{ url_for('antivirus_help') }}" class="btn btn-outline-warning mt-2">
+                            <i data-feather="external-link"></i>
+                            Detailed Guide
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gemini AI Configuration Section -->
+        <div class="card mb-4 border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">
                     <i data-feather="zap"></i>
-                    AI Configuration - Gemini API Setup
+                    AI Configuration - Gemini API Setup  
                 </h5>
             </div>
             <div class="card-body">
