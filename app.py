@@ -212,8 +212,14 @@ def index():
     # Check if Gemini API is configured
     gemini_api_key = os.environ.get('GEMINI_API_KEY')
     gemini_enabled = gemini_api_key and gemini_api_key != 'AIzaSyDummy_Key_Replace_With_Real_Key'
+    
+    # Get Android Studio path for template
+    android_studio_path = os.environ.get('ANDROID_STUDIO_PATH', '')
 
-    return render_template('index.html', projects=projects, gemini_enabled=gemini_enabled)
+    return render_template('index.html', 
+                         projects=projects, 
+                         gemini_enabled=gemini_enabled,
+                         android_studio_path=android_studio_path)
 
 @app.route('/upload', methods=['POST'])
 def upload_apk():

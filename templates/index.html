@@ -59,7 +59,7 @@
                         <div class="input-group">
                             <input type="text" class="form-control" id="android_studio_path" name="android_studio_path" 
                                    placeholder="C:\Program Files\Android\Android Studio\bin\studio64.exe"
-                                   value="{{ os.environ.get('ANDROID_STUDIO_PATH', '') }}">
+                                   value="{{ android_studio_path }}">
                             <button type="button" class="btn btn-outline-secondary" onclick="browseForStudioPath()">
                                 <i data-feather="folder"></i>
                             </button>
@@ -98,7 +98,7 @@
                     <div class="col-md-8">
                         <h6>Required Exclusions:</h6>
                         <ul class="small">
-                            <li><strong>Folders:</strong> <code>{{ os.path.abspath('.') }}</code></li>
+                            <li><strong>Folders:</strong> <code>/home/runner/workspace</code></li>
                             <li><strong>Files:</strong> <code>apktool.jar</code>, <code>adb.exe</code>, <code>*.apk</code></li>
                             <li><strong>Processes:</strong> <code>python.exe</code>, <code>java.exe</code></li>
                         </ul>
