@@ -46,7 +46,8 @@ class APKEditor {
             'color-palette': 'edit-3',
             'folder-open': 'folder',
             'magic-wand': 'zap',
-            'layout': 'grid'
+            'layout': 'grid',
+            'lightbulb': 'sun'
         };
 
         document.querySelectorAll('[data-feather]').forEach(icon => {
@@ -301,6 +302,11 @@ class APKEditor {
         document.body.removeChild(textArea);
     }
 }
+
+// Initialize the APK Editor when the DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    new APKEditor();
+});
 }
 
 // Initialize when DOM is loaded

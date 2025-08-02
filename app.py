@@ -967,7 +967,7 @@ def create_android_studio_project(project_id):
             'message': launch_message,
             'project_path': android_studio_path.replace('\\', '/'),
             'project_id': project_id,
-            'auto_launched': studio_exe is not None if 'studio_exe' in locals() else False
+            'auto_launched': auto_launched
         })
 
     except Exception as e:
