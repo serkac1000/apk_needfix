@@ -22,6 +22,99 @@ except ImportError as e:
             return {}
         def get_resource_content(self, *args, **kwargs):
             return ""
+
+def find_android_studio_dynamically():
+    """Dynamically find Android Studio installation"""
+    import glob
+    
+    username = os.getenv('USERNAME', '')
+    
+    # Common Android Studio installation paths
+    android_studio_paths = [
+        r"C:\Program Files\Android\Android Studio\bin\studio64.exe",
+        r"C:\Program Files (x86)\Android\Android Studio\bin\studio64.exe",
+        rf"C:\Users\{username}\AppData\Local\Android\Studio\bin\studio64.exe",
+        rf"C:\Users\{username}\AppData\Roaming\JetBrains\Toolbox\apps\AndroidStudio\ch-0\*\bin\studio64.exe",
+        r"C:\Android\Android Studio\bin\studio64.exe",
+        "studio64.exe",  # If in PATH
+        "studio.exe"     # Alternative name
+    ]
+    
+    # Try each path
+    for path in android_studio_paths:
+        if '*' in path:
+            # Handle wildcard paths (like Toolbox installations)
+            matches = glob.glob(path)
+            if matches:
+                for match in matches:
+                    if os.path.exists(match):
+                        logging.info(f"Found Android Studio at: {match}")
+                        return match
+        elif os.path.exists(path):
+            logging.info(f"Found Android Studio at: {path}")
+            return path
+    
+    # Try to find in common program directories
+    program_dirs = [
+        r"C:\Program Files",
+        r"C:\Program Files (x86)",
+        rf"C:\Users\{username}\AppData\Local",
+        rf"C:\Users\{username}\AppData\Roaming\JetBrains\Toolbox\apps"
+    ]
+    
+    for prog_dir in program_dirs:
+        if os.path.exists(prog_dir):
+            # Search for Android Studio in subdirectories
+            android_pattern = os.path.join(prog_dir, "**", "*Android*Studio*", "bin", "studio64.exe")
+            matches = glob.glob(android_pattern, recursive=True)
+            if matches:
+                studio_path = matches[0]
+                logging.info(f"Found Android Studio at: {studio_path}")
+                return studio_path
+    
+    # Try to find using 'where' command (Windows)
+    try:
+        import subprocess
+        result = subprocess.run(['where', 'studio64'], capture_output=True, text=True, shell=True)
+        if result.returncode == 0 and result.stdout.strip():
+            studio_path = result.stdout.strip().split('\n')[0]
+            if os.path.exists(studio_path):
+                logging.info(f"Found Android Studio via 'where' command: {studio_path}")
+                return studio_path
+    except Exception as e:
+        logging.debug(f"'where' command failed: {e}")
+    
+    # Check Windows Registry for Android Studio
+    try:
+        import winreg
+        
+        # Check HKEY_LOCAL_MACHINE for Android Studio
+        reg_paths = [
+            r"SOFTWARE\Android Studio",
+            r"SOFTWARE\WOW6432Node\Android Studio",
+            r"SOFTWARE\JetBrains\Android Studio"
+        ]
+        
+        for reg_path in reg_paths:
+            try:
+                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, reg_path) as key:
+                    install_path, _ = winreg.QueryValueEx(key, "Path")
+                    studio_exe = os.path.join(install_path, "bin", "studio64.exe")
+                    if os.path.exists(studio_exe):
+                        logging.info(f"Found Android Studio via registry: {studio_exe}")
+                        return studio_exe
+            except (FileNotFoundError, OSError):
+                continue
+                
+    except ImportError:
+        logging.debug("winreg module not available (not on Windows)")
+    except Exception as e:
+        logging.debug(f"Registry search failed: {e}")
+    
+    logging.warning("Android Studio not found - using fallback")
+    return None
+
+
         def save_image_resource(self, *args, **kwargs):
             return False
         def save_string_resource(self, *args, **kwargs):
@@ -875,11 +968,11 @@ def create_android_studio_project(project_id):
         auto_launched = False
         
         try:
-            # HARDCODED Android Studio path for reliable detection
-            studio_exe = r"C:\Program Files\Android\Android Studio\bin\studio64.exe"
+            # DYNAMIC Android Studio detection
+            studio_exe = find_android_studio_dynamically()
             
-            # Verify the hardcoded path exists
-            if os.path.exists(studio_exe):
+            # Verify the found path exists
+            if studio_exe and os.path.exists(studio_exe):
                 logging.info(f"Found Android Studio at: {studio_exe}")
                 
                 # Try multiple launch methods with better error handling
@@ -948,7 +1041,7 @@ def create_android_studio_project(project_id):
                     logging.warning("All launch methods failed")
                     
             else:
-                logging.warning("Android Studio not found at hardcoded path")
+                logging.warning("Android Studio not found with dynamic detection")
                 # Fallback: open folder in Explorer
                 try:
                     subprocess.Popen(f'explorer "{os.path.abspath(android_studio_path)}"', shell=True)
@@ -990,20 +1083,8 @@ def open_in_android_studio(project_id):
         # Try to open in Android Studio
         import subprocess
         
-        # Common Android Studio installation paths
-        android_studio_paths = [
-            r"C:\Program Files\Android\Android Studio\bin\studio64.exe",
-            r"C:\Program Files (x86)\Android\Android Studio\bin\studio64.exe",
-            r"C:\Users\{}\AppData\Local\Android\Studio\bin\studio64.exe".format(os.getenv('USERNAME', '')),
-            "studio64.exe",  # If in PATH
-            "studio.exe"     # Alternative name
-        ]
-
-        studio_exe = None
-        for path in android_studio_paths:
-            if os.path.exists(path):
-                studio_exe = path
-                break
+        # Use dynamic detection
+        studio_exe = find_android_studio_dynamically()
 
         if studio_exe:
             # Open Android Studio with the project
